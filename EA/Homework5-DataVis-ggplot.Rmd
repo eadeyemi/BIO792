@@ -1,0 +1,217 @@
+---
+title: "Homework5-DataVis-ggplot"
+author: "Emmanuel"
+date: 'DUE: Thursday, March 10'
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Necessary items:
+- **libraries:** tidyverse, ggsci, ggforce, patchwork, Hmisc
+- **files:** bloom_df.csv, hw_task2_blank.png
+
+Within RStudio you can directly edit these blocks of code and turn in your homework that way with your code and figures printed.   
+I **HIGHLY** recommend getting your code to work in a normal R script then just copy and pasting the final code over to this document
+
+**First: import libraries, set your working directory, and read in bloom_df**  
+```{r init, message=FALSE, warning=FALSE}
+library(tidyverse) 
+library(ggforce) 
+library(ggsci)
+library(patchwork)
+library(Hmisc)
+
+setwd('~/Data_Science_For_Biology_II/Part.4.DataVisualization/ggplot/') #change to match your ggplot directory
+
+bloom_df <- read.csv('bloom_df.csv')
+```
+
+### bloom_df contents
+- **taxa:** genus_species
+- **genus** 
+- **species** 
+- **logbodysize** 
+- **trophic_position**
+- **reg:** diadromous or non-diadromous
+
+Let's take a peak and look at the structure
+```{r bloom_df}
+bloom_df[1:5,]
+str(bloom_df)
+```
+
+### Graphical tasks
+
+This next tasks are going to ask you to make a series of figures. For each one, I would like you to make all of them *look good*. Change the theme around, change the axis labels, etc. Additionally, each of these will use the **reg** column which has 2 factors. Change the color and/or shape of them both. 
+
+### Task 1: Continuous vs. continuous plot
+
+Create two scatterplots of logbodysize vs. trophic_position grouped by reg
+
+##### First plot: 
+#- a 2 trend lines (method = 'lm'), one for each reg variable
+ggplot(data=bloom_df,aes(x=logbodysize, y=trophic_position,colour=reg)) + 
+  geom_point() + 
+  stat_smooth(method = 'lm', linetype='dashed',linewidth=2, se = FALSE)
+
+
+
+
+
+
+```{r 1.1}
+ggplot(data=bloom_df,aes(x=logbodysize, y=trophic_position,colour=reg)) + 
+  geom_point() + 
+  stat_smooth(method = 'lm', linetype='dashed',linewidth=2, se = FALSE)
+```
+
+##### Second plot - a single trend line for the whole model
+```{r 1.2}
+#plot 1.2
+ggplot(data=bloom_df,aes(x=logbodysize,y=trophic_position)) + 
+  geom_point(aes(colour=reg),size=4) + 
+  stat_smooth(method='lm',linetype='dashed',colour='black',linewidth=2)
+
+```
+
+### Task 2: Continuous vs. categorical line 145, line 197 for the graphs. long format line 245
+##### The layout will be: 
+- 2 panels: trophic_position and logbodysize  
+- x axis: reg  
+- y axis: value of trophic_position and logbodysize  
+##### Create 4 plots:  line 230
+- bar and error bars (mean and 95% conf. int.)  
+- point and error bars (mean and 95% conf. int.)  
+- box plots  
+- raw data + point and error bars (mean and 95% conf. int.)  
+
+All these plots should have the same general layout but change the type of plot to visualize the data. 
+
+**HINT:** logbodysize and trophic_position need to be turned into long format  
+
+##### Example layout:   
+![sample layout for task2](hw_task2_blank.png){width=50%}
+
+```{r 2.1}
+bloom_sum_df_subset <- bloom_df %>%
+  group_by(reg) %>%
+  summarise(logbodysize_mean = mean(logbodysize, na.rm = TRUE), 
+            logbodysize_sd = sd(logbodysize, na.rm = TRUE), 
+            logbodysize_n = n(), #temp count
+            trophic_position_mean = mean(trophic_position, na.rm = TRUE), 
+            trophic_position_sd = sd(trophic_position, na.rm = TRUE),  
+            trophic_position_n = n()) 
+
+bloom_sum_df <- bloom_df %>%
+  group_by(reg) %>%
+  summarise(logbodysize_mean = mean(logbodysize, na.rm = TRUE), 
+            logbodysize_sd = sd(logbodysize, na.rm = TRUE), 
+            logbodysize_n = n(), #temp count
+            trophic_position_mean = mean(trophic_position, na.rm = TRUE), 
+            trophic_position_sd = sd(trophic_position, na.rm = TRUE),  
+            trophic_position_n = n())  %>% 
+  mutate(logbodysize_se = logbodysize_sd / sqrt(logbodysize_n),
+  logbodysize_lower.ci = logbodysize_mean - qt(1 - (0.05 / 2), logbodysize_n - 1) * logbodysize_se,
+  logbodysize_upper.ci = logbodysize_mean + qt(1 - (0.05 / 2), logbodysize_n - 1) * logbodysize_se,
+  trophic_position_se = trophic_position_sd / sqrt(trophic_position_n),
+  trophic_position_lower.ci = trophic_position_mean - qt(1 - (0.05 / 2), trophic_position_n - 1) * trophic_position_se,
+  trophic_position_upper.ci = trophic_position_mean + qt(1 - (0.05 / 2), trophic_position_n - 1) * trophic_position_se)
+
+
+logbodysize_sum_df <- bloom_df %>%
+  group_by(reg) %>%
+  summarise(mean = mean(logbodysize, na.rm = TRUE),
+            sd = sd(logbodysize, na.rm = TRUE), 
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         ci = 1.96 * se) 
+         
+logbodysize_sum_df$Size <- 'LogbodySize'
+
+
+trophic_position_sum_df <- bloom_df %>%
+  group_by(reg) %>%
+  summarise(mean = mean(trophic_position, na.rm = TRUE),
+            sd = sd(trophic_position, na.rm = TRUE), 
+            n = n()) %>% 
+  mutate(se = sd / sqrt(n),
+         ci = 1.96 * se) 
+         
+trophic_position_sum_df$Size <- 'TrophicPosition'
+ 
+
+bloom_sum_df <- rbind(logbodysize_sum_df,trophic_position_sum_df)
+
+
+ggplot(data=bloom_sum_df,aes(x=reg,y=mean,fill=Size)) +
+  facet_wrap(~Size,nrow=1,scales = 'free') + 
+  geom_errorbar(aes(ymin = mean - ci, ymax = mean + ci)) + 
+  geom_bar(stat = 'identity') 
+```
+
+```{r 2.2}
+ggplot(data=bloom_sum_df,aes(x=reg,y=mean,colour=Size)) +
+  facet_wrap(~Size,nrow=1,scales = 'free') + 
+  geom_errorbar(aes(ymin = mean - ci, ymax = mean + ci),colour='black') +
+  geom_point(size=5)
+```
+
+```{r 2.3}
+
+bloom_long_df <- bloom_df %>%
+  pivot_longer(cols = c(logbodysize,trophic_position), names_to = "Size", values_to = "value")
+ggplot(data=bloom_long_df,aes(x=reg,y=value,fill=Size)) +
+  facet_wrap(~Size,nrow=1,scales = 'free') +
+  geom_boxplot()
+```
+
+```{r 2.4}
+ggplot(data=bloom_long_df,aes(x=reg,y=value,colour=Size)) +
+  facet_wrap(~Size,nrow=1,scales = 'free') +
+  geom_point(size=4) +
+  stat_summary(fun.data = mean_cl_boot, geom = "errorbar",color='black') + 
+  stat_summary(fun = mean, geom = "point",size=5,colour='black') 
+
+```
+
+### Task 3: layering your plots
+
+Make any two figures with the bloom_df! Can be something we've done or something completely different. Make one TERRIBLE figure and one GREAT figure.
+
+Put them together using *patchwork* or *ggarrange* 
+
+
+```{r 3.1}
+terrible_plot <- ggplot(data=bloom_long_df,aes(x=reg,y=value,fill=Size)) +
+  facet_wrap(~Size,nrow=1) +
+   ggtitle('TERRIBLE') + 
+   geom_violin(draw_quantiles = 0.5)
+
+terrible_plot
+
+```
+```{r 3.2}
+great_plot <- ggplot(data=bloom_long_df,aes(x=reg,y=value,fill=Size)) +
+  facet_wrap(~Size,nrow=1, scales = 'free') +
+  ggtitle('GREAT') + 
+  geom_violin(draw_quantiles = 0.5)
+
+great_plot
+```
+
+```{r 3.3}
+terrible_plot + great_plot + plot_layout(ncol=2,nrow=2)
+
+```
+
+### Bonus: make a map (not required)  
+
+In the github for this course, there is an Rmarkdown called *ggmap_ex*. You can use this as a reference to make a map using any data you want. Try using your own data so it is useful.  
+
+```{r bonus}
+#bonus map
+```
